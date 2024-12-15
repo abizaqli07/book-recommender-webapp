@@ -4,69 +4,54 @@ import streamlit as st
 import numpy as np
 
 
-st.header('Book Recommender System Using Machine Learning')
-model = pickle.load(open('model.pkl','rb'))
-book_names = pickle.load(open('book_names.pkl','rb'))
-final_rating = pickle.load(open('final_rating.pkl','rb'))
-book_pivot = pickle.load(open('book_pivot.pkl','rb'))
-
-
-def fetch_poster(suggestion):
-    book_name = []
-    ids_index = []
-    poster_url = []
-
-    for book_id in suggestion:
-        book_name.append(book_pivot.index[book_id])
-
-    for name in book_name[0]: 
-        ids = np.where(final_rating['title'] == name)[0][0]
-        ids_index.append(ids)
-
-    for idx in ids_index:
-        url = final_rating.iloc[idx]['image_url']
-        poster_url.append(url)
-
-    return poster_url
-
-
+st.header('Book Recommender System - Big Data Final Project')
+popular_df = pickle.load(open('artifacts/popular.pkl','rb'))
+pt = pickle.load(open('artifacts/pt.pkl','rb'))
+books = pickle.load(open('artifacts/books.pkl','rb'))
+similarity_scores = pickle.load(open('artifacts/similarity_scores.pkl','rb'))     
 
 def recommend_book(book_name):
-    books_list = []
-    book_id = np.where(book_pivot.index == book_name)[0][0]
-    distance, suggestion = model.kneighbors(book_pivot.iloc[book_id,:].values.reshape(1,-1), n_neighbors=6 )
+    index = np.where(pt.index == book_name)[0][0]
+    similar_items = sorted(list(enumerate(similarity_scores[index])), key=lambda x: x[1], reverse=True)[1:5]
 
-    poster_url = fetch_poster(suggestion)
-    
-    for i in range(len(suggestion)):
-            books = book_pivot.index[suggestion[i]]
-            for j in books:
-                books_list.append(j)
-    return books_list , poster_url       
+    data = []
+    for i in similar_items:
+        item = []
+        temp_df = books[books['Book-Title'] == pt.index[i[0]]]
+        item.extend(list(temp_df.drop_duplicates('Book-Title')['Book-Title'].values))
+        item.extend(list(temp_df.drop_duplicates('Book-Title')['Book-Author'].values))
+        item.extend(list(temp_df.drop_duplicates('Book-Title')['Image-URL-L'].values))
+
+        data.append(item)
+        
+    return data
 
 
 
-selected_books = st.selectbox(
-    "Type or select a book from the dropdown",
-    book_names
+selected_books = st.text_input(
+    "Type book title",
 )
 
 if st.button('Show Recommendation'):
-    recommended_books,poster_url = recommend_book(selected_books)
+    data = recommend_book(selected_books)
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.text(recommended_books[1])
-        st.image(poster_url[1])
+        st.text(data[0][1])
+        st.image(data[0][2])
     with col2:
-        st.text(recommended_books[2])
-        st.image(poster_url[2])
-
+        st.text(data[1][1])
+        st.image(data[1][2])
     with col3:
-        st.text(recommended_books[3])
-        st.image(poster_url[3])
+        st.text(data[2][1])
+        st.image(data[2][2])
     with col4:
-        st.text(recommended_books[4])
-        st.image(poster_url[4])
-    with col5:
-        st.text(recommended_books[5])
-        st.image(poster_url[5])
+        st.text(data[3][1])
+        st.image(data[3][2])
+
+
+
+
+
+
+
+
